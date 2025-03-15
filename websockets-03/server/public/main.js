@@ -6,6 +6,7 @@ const messageContainer = document.getElementById("message-container");
 const nameInput = document.getElementById("name-input");
 const messageForm = document.getElementById("message-form");
 const messageInput = document.getElementById("message-input");
+const messageTone = new Audio("/message-tone.mp3");
 
 function scrollToBottom() {
   messageContainer.scrollTo(0, messageContainer.scrollHeight);
@@ -25,6 +26,7 @@ function sendMessage() {
 }
 
 function addMessageToUI(isOwnMessage, data) {
+  clearFeedback();
   const options = {
     day: "numeric",
     month: "long",
@@ -57,5 +59,39 @@ socket.on("clients-total", (data) => {
 });
 
 socket.on("chat-message", (data) => {
+  messageTone.play().catch((error) => console.error("Playback error:", error));
   addMessageToUI(false, data);
 });
+
+socket.on("feedback", (data) => {
+  clearFeedback();
+  const element = `
+          <li class="message-feedback">
+            <p class="feedback" id="feedback">${data.feedback}</p>
+          </li>
+    `;
+  messageContainer.insertAdjacentHTML("beforeend", element);
+});
+
+messageInput.addEventListener("focus", (e) => {
+  socket.emit("feedback", {
+    feedback: `✍️ ${nameInput.value} is typing a message`,
+  });
+});
+
+messageInput.addEventListener("keypress", (e) => {
+  socket.emit("feedback", {
+    feedback: `✍️ ${nameInput.value} is typing a message`,
+  });
+});
+messageInput.addEventListener("blur", (e) => {
+  socket.emit("feedback", {
+    feedback: "",
+  });
+});
+
+function clearFeedback() {
+  document.querySelectorAll("li.message-feedback").forEach((element) => {
+    element.parentNode.removeChild(element);
+  });
+}
